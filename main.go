@@ -12,12 +12,13 @@ import (
 func main() {
 
 	var (
-		pass   = []byte{0xA, 0xB, 0xC, 0xD, 0xE}
-		tr     o3.ThreemaRest
-		idpath = "threema.id"
-		abpath = "address.book"
-		tid    o3.ThreemaID
-		rid    = "ZX9TZZ7P"
+		pass    = []byte{0xA, 0xB, 0xC, 0xD, 0xE}
+		tr      o3.ThreemaRest
+		idpath  = "threema.id"
+		abpath  = "address.book"
+		tid     o3.ThreemaID
+		pubnick = "parrot"
+		rid     = "ZX9TZZ7P"
 	)
 
 	// check whether an id file exists or else create a new one
@@ -42,6 +43,8 @@ func main() {
 		}
 	}
 	fmt.Printf("Using ID: %s\n", tid.String())
+
+	tid.Nick = o3.NewPubNick(pubnick)
 
 	ctx := o3.NewSessionContext(tid)
 
