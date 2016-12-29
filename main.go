@@ -19,7 +19,7 @@ func main() {
 		tid o3.ThreemaID
 	)
 
-	// check whether and id file exists or else create a new one
+	// check whether an id file exists or else create a new one
 	if _, err := os.Stat(idpath); os.IsNotExist(err) {
 
 		tid, err := tr.CreateIdentity()
