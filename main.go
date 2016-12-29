@@ -15,8 +15,9 @@ func main() {
 		pass   = []byte{0xA, 0xB, 0xC, 0xD, 0xE}
 		tr     o3.ThreemaRest
 		idpath = "threema.id"
-		//abpath = "address.book"
-		tid o3.ThreemaID
+		abpath = "address.book"
+		tid    o3.ThreemaID
+		rid    = "ZX9TZZ7P"
 	)
 
 	// check whether an id file exists or else create a new one
@@ -27,38 +28,64 @@ func main() {
 			fmt.Println("CreateIdentity failed")
 			log.Fatal(err)
 		}
+		fmt.Printf("Saving ID to %s\n", idpath)
 		err = tid.SaveToFile(idpath, pass)
 		if err != nil {
 			fmt.Println("saving ID failed")
 			log.Fatal(err)
 		}
 	} else {
+		fmt.Printf("Loading ID from %s\n", idpath)
 		tid, err = o3.LoadIDFromFile(idpath, pass)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
-	fmt.Printf("Use ID: %s\n", tid.String())
+	fmt.Printf("Using ID: %s\n", tid.String())
 
 	ctx := o3.NewSessionContext(tid)
 
-	// lookup our recipient on the threema directory server
-	myID := o3.NewIDString("ZX9TZZ7P")
-	myContact, err := tr.GetContactByID(myID)
-	if err != nil {
-		log.Fatal(err)
+	//check if we can load an addressbook
+	if _, err := os.Stat(abpath); !os.IsNotExist(err) {
+		fmt.Printf("Loading addressbook from %s\n", abpath)
+		err = ctx.ID.Contacts.ImportFrom(abpath)
+		if err != nil {
+			fmt.Println("loading addressbook failed")
+			log.Fatal(err)
+		}
 	}
-	// add them to our address book
-	ctx.ID.Contacts.Add(myContact)
+
+	//check if we know the remote ID
+	if _, b := ctx.ID.Contacts.Get(rid); b == false {
+		//retrieve the ID from Threema's servers
+		myID := o3.NewIDString(rid)
+		fmt.Printf("Retrieving %s from directory server\n", myID.String())
+		myContact, err := tr.GetContactByID(myID)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// add them to our address book
+		ctx.ID.Contacts.Add(myContact)
+
+		//and save the address book
+		fmt.Printf("Saving addressbook to %s\n", abpath)
+		err = ctx.ID.Contacts.SaveTo(abpath)
+		if err != nil {
+			fmt.Println("saving addressbook failed")
+			log.Fatal(err)
+		}
+	}
 
 	// let the session begin
+	fmt.Println("Starting session")
 	sendMsgChan, receiveMsgChan, err := ctx.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// send our initial message to our recipient
-	err = ctx.SendTextMessage("ZX9TZZ7P", "Say something!", sendMsgChan)
+	fmt.Println("Sending initial message")
+	err = ctx.SendTextMessage(rid, "Say something!", sendMsgChan)
 	if err != nil {
 		log.Fatal(err)
 	}
