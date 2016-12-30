@@ -58,7 +58,8 @@ func main() {
 		}
 	}
 
-	//check if we know the remote ID
+	// check if we know the remote ID for
+	// (just demonstration purposes \bc sending and receiving functions do this lookup for us)
 	if _, b := ctx.ID.Contacts.Get(rid); b == false {
 		//retrieve the ID from Threema's servers
 		myID := o3.NewIDString(rid)
