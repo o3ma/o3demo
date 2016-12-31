@@ -106,12 +106,28 @@ func main() {
 		case o3.AudioMessage:
 			// play the audio if you like
 		case o3.TextMessage:
-			// echo a quoute
+			// respond with a quote of what was send to us.
+			// to make the quote render nicely in the app we use "markdown"
+			// of the form "> PERSONWEQUOTE: Text of qoute\nSomething we wanna add."
 			qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), msg.Text(), "Exactly!")
+			// we use the convinient "SendTextMessage" function to send
 			err = ctx.SendTextMessage(msg.Sender().String(), qoute, sendMsgChan)
 			if err != nil {
 				log.Fatal(err)
 			}
+			// confirm to the sender that we received the message
+			// this is how one can send messages manually without helper functions like "SendTextMessage"
+			drm, err := o3.NewDeliveryReceiptMessage(&ctx, msg.Sender().String(), msg.ID(), o3.MSGDELIVERED)
+			if err != nil {
+				log.Fatal(err)
+			}
+			sendMsgChan <- drm
+			// give a thumbs up
+			upm, err := o3.NewDeliveryReceiptMessage(&ctx, msg.Sender().String(), msg.ID(), o3.MSGAPPROVED)
+			if err != nil {
+				log.Fatal(err)
+			}
+			sendMsgChan <- upm
 		case o3.GroupTextMessage:
 			fmt.Printf("%s for Group [%x] created by [%s]:\n%s\n", msg.Sender(), msg.GroupID(), msg.GroupCreator(), msg.Text())
 		case o3.GroupManageSetNameMessage:
@@ -121,7 +137,7 @@ func main() {
 		case o3.GroupMemberLeftMessage:
 			fmt.Printf("Member [%s] left the Group [%x]\n", msg.Sender(), msg.GroupID())
 		case o3.DeliveryReceiptMessage:
-			fmt.Printf("Message [%x] has been acknowledged by the server.\n", msg.MsgID)
+			fmt.Printf("Message [%x] has been acknowledged by the server.\n", msg.MsgID())
 		case o3.TypingNotificationMessage:
 			fmt.Printf("Typing Notification from %s: [%x]\n", msg.Sender(), msg.OnOff)
 		default:
