@@ -23,8 +23,8 @@ func main() {
 
 	// check whether an id file exists or else create a new one
 	if _, err := os.Stat(idpath); err != nil {
-
-		tid, err := tr.CreateIdentity()
+		var err error
+		tid, err = tr.CreateIdentity()
 		if err != nil {
 			fmt.Println("CreateIdentity failed")
 			log.Fatal(err)
