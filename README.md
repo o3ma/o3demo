@@ -6,5 +6,3 @@ This is some simple demo code, doing the following:
 * Query the directory server for an ID (one of a demo echo server we run)
 * Save the address book
 * Start an echo server
-
-This code needs the certificate file 'cert.pem' available next to the generated binary. It is used to validate the self-signed TLS certificate presented by the Threema directory server.
