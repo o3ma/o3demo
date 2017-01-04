@@ -107,6 +107,12 @@ func main() {
 			// play the audio if you like
 		case o3.TextMessage:
 			// respond with a quote of what was send to us.
+			
+			// but only if it's no a message we sent to ourselves, avoid recursive neverending qoutes
+			if (tid.String() == msg.Sender().String()) {
+				continue
+			}
+			
 			// to make the quote render nicely in the app we use "markdown"
 			// of the form "> PERSONWEQUOTE: Text of qoute\nSomething we wanna add."
 			qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), msg.Text(), "Exactly!")
