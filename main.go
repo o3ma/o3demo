@@ -16,6 +16,7 @@ func main() {
 		tr      o3.ThreemaRest
 		idpath  = "threema.id"
 		abpath  = "address.book"
+		gdpath  = "group.directory"
 		tid     o3.ThreemaID
 		pubnick = "parrot"
 		rid     = "8S3HMY9Z"
@@ -54,6 +55,16 @@ func main() {
 		err = ctx.ID.Contacts.ImportFrom(abpath)
 		if err != nil {
 			fmt.Println("loading addressbook failed")
+			log.Fatal(err)
+		}
+	}
+
+	//check if we can load a group directory
+	if _, err := os.Stat(gdpath); !os.IsNotExist(err) {
+		fmt.Printf("Loading group directory from %s\n", gdpath)
+		err = ctx.ID.Groups.LoadFromFile(gdpath)
+		if err != nil {
+			fmt.Println("loading group directory failed")
 			log.Fatal(err)
 		}
 	}
@@ -130,7 +141,7 @@ func main() {
 			sendMsgChan <- upm
 		case o3.GroupTextMessage:
 			fmt.Printf("%s for Group [%x] created by [%s]:\n%s\n", msg.Sender(), msg.GroupID(), msg.GroupCreator(), msg.Text())
-			group, ok := ctx.ID.Groups[msg.GroupCreator()][msg.GroupID()]
+			group, ok := ctx.ID.Groups.Get(msg.GroupCreator(), msg.GroupID())
 			if ok {
 				ctx.SendGroupTextMessage(group, "This is a group reply!", sendMsgChan)
 			}
@@ -138,22 +149,21 @@ func main() {
 			fmt.Printf("Group [%x] is now called %s\n", msg.GroupID(), msg.Name())
 		case o3.GroupManageSetMembersMessage:
 			fmt.Printf("Group [%x] now includes %v\n", msg.GroupID(), msg.Members())
-			if ctx.ID.Groups == nil {
-				ctx.ID.Groups = make(map[o3.IDString]map[[8]byte]o3.Group)
-			}
-			_, ok := ctx.ID.Groups[msg.Sender()]
-			if !ok {
-				ctx.ID.Groups[msg.Sender()] = make(map[[8]byte]o3.Group)
-			}
-			// replace our id with group creator id
-			// \bc we know we are in the group, but we don't know who the creator is
+			// TODO: this should be done in Add()
+			_, ok := ctx.ID.Groups.Get(msg.Sender(), msg.GroupID())
 			members := msg.Members()
-			for i := range members {
-				if members[i] == ctx.ID.ID {
-					members[i] = msg.Sender()
+			if !ok {
+				// replace our id with group creator id
+				// \bc we know we are in the group, but we don't know who the creator is
+				for i := range members {
+					if members[i] == ctx.ID.ID {
+						members[i] = msg.Sender()
+					}
 				}
 			}
-			ctx.ID.Groups[msg.Sender()][msg.GroupID()] = o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: members}
+			// TODO: add only adds if the group is new so updates on the member list do not work yet
+			ctx.ID.Groups.Add(o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: members})
+			ctx.ID.Groups.SaveToFile(gdpath)
 		case o3.GroupMemberLeftMessage:
 			fmt.Printf("Member [%s] left the Group [%x]\n", msg.Sender(), msg.GroupID())
 		case o3.DeliveryReceiptMessage:
