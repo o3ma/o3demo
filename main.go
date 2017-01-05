@@ -105,7 +105,15 @@ func main() {
 			// display the image if you like
 		case o3.AudioMessage:
 			// play the audio if you like
+			
 		case o3.TextMessage:
+			fmt.Printf("TextMessage: ~%s [%s]: %s\n", msg.PubNick(), msg.Sender().String(), msg.Text())
+
+			// continue only if it's not a message we sent to ourselves, avoid recursive qoutes of qoutes
+			if (tid.String() == msg.Sender().String()) {
+				continue
+			}
+			
 			// respond with a quote of what was send to us.
 			// to make the quote render nicely in the app we use "markdown"
 			// of the form "> PERSONWEQUOTE: Text of qoute\nSomething we wanna add."
@@ -128,21 +136,70 @@ func main() {
 				log.Fatal(err)
 			}
 			sendMsgChan <- upm
+			
 		case o3.GroupTextMessage:
-			fmt.Printf("%s for Group [%x] created by [%s]:\n%s\n", msg.Sender(), msg.GroupID(), msg.GroupCreator(), msg.Text())
+			// TODO: ERROR: SendGroupTextMessage does not send to group
+			fmt.Printf("GroupTextMessage: ~%s [%s] for Group [%x] created by [%s]\n", msg.PubNick(), msg.Sender(), msg.GroupID(), msg.GroupCreator())
+			fmt.Printf("GroupTextMessage: Text: %s\n", msg.Text())
+
+			// is there a list for GroupCreators groups? otherwise create on the fly
+			if (ctx.ID.Groups == nil) || (ctx.ID.Groups[msg.GroupCreator()] == nil) {
+				fmt.Printf("Group-list missing, have to create group-list.\n", msg.GroupID(), msg.GroupCreator())
+				// create group-list if missing
+				if ctx.ID.Groups == nil {
+					ctx.ID.Groups = make( map[o3.IDString]map[[8]byte]o3.Group )
+				}
+				// create group-list-entry if missing
+				_, ok := ctx.ID.Groups[msg.GroupCreator()]
+				if !ok {
+					fmt.Printf("Group [%x] is new by [%s]\n", msg.GroupID(), msg.GroupCreator())
+					ctx.ID.Groups[msg.GroupCreator()] = make(map[[8]byte]o3.Group)
+				}
+			}
+
+			// is this group known? otherwise create on the fly, not knowing all members :(
+			// can you ask GroupCreator for Members? 
 			group, ok := ctx.ID.Groups[msg.GroupCreator()][msg.GroupID()]
+			if !ok {
+				fmt.Printf("Group unknown, create group [%x] by [%s] on the fly, not knowing all members..\n", msg.GroupID(), msg.GroupCreator())
+				var tmpMembers []o3.IDString
+				tmpMembers = append(tmpMembers, msg.GroupCreator())
+				tmpMembers = append(tmpMembers, msg.Sender())
+				tmpMembers = append(tmpMembers, msg.Recipient())
+				// what about duplicates?
+				ctx.ID.Groups[msg.GroupCreator()][msg.GroupID()] = o3.Group{CreatorID: msg.GroupCreator(), GroupID: msg.GroupID(), Members: tmpMembers }
+			}
+
+			// send message to group, which should exist now
+			group, ok = ctx.ID.Groups[msg.GroupCreator()][msg.GroupID()]
 			if ok {
 				ctx.SendGroupTextMessage(group, "This is a group reply!", sendMsgChan)
+			} else {
+				fmt.Printf("ERROR sending to group [%x] by [%s].\n", msg.GroupID(), msg.GroupCreator())
 			}
+			
 		case o3.GroupManageSetNameMessage:
+			// TODO: create group-list-entry if missing, update internal group-name
 			fmt.Printf("Group [%x] is now called %s\n", msg.GroupID(), msg.Name())
+			
 		case o3.GroupManageSetMembersMessage:
 			fmt.Printf("Group [%x] now includes %v\n", msg.GroupID(), msg.Members())
+
+			// create group-list if missing
+			if ctx.ID.Groups == nil {
+				ctx.ID.Groups = make( map[o3.IDString]map[[8]byte]o3.Group )
+			}
+
+			// create group-list-entry if missing
 			_, ok := ctx.ID.Groups[msg.Sender()]
 			if !ok {
+				fmt.Printf("Group [%x] is new by [%s]\n", msg.GroupID(), msg.Sender())
 				ctx.ID.Groups[msg.Sender()] = make(map[[8]byte]o3.Group)
 			}
+
+			// assign members to group
 			ctx.ID.Groups[msg.Sender()][msg.GroupID()] = o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: msg.Members()}
+
 		case o3.GroupMemberLeftMessage:
 			fmt.Printf("Member [%s] left the Group [%x]\n", msg.Sender(), msg.GroupID())
 		case o3.DeliveryReceiptMessage:
