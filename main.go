@@ -18,7 +18,7 @@ func main() {
 		abpath  = "address.book"
 		tid     o3.ThreemaID
 		pubnick = "parrot"
-		rid     = "ZX9TZZ7P"
+		rid     = "8S3HMY9Z"
 	)
 
 	// check whether an id file exists or else create a new one
@@ -130,10 +130,19 @@ func main() {
 			sendMsgChan <- upm
 		case o3.GroupTextMessage:
 			fmt.Printf("%s for Group [%x] created by [%s]:\n%s\n", msg.Sender(), msg.GroupID(), msg.GroupCreator(), msg.Text())
+			group, ok := ctx.ID.Groups[msg.GroupCreator()][msg.GroupID()]
+			if ok {
+				ctx.SendGroupTextMessage(group, "This is a group reply!", sendMsgChan)
+			}
 		case o3.GroupManageSetNameMessage:
 			fmt.Printf("Group [%x] is now called %s\n", msg.GroupID(), msg.Name())
 		case o3.GroupManageSetMembersMessage:
 			fmt.Printf("Group [%x] now includes %v\n", msg.GroupID(), msg.Members())
+			_, ok := ctx.ID.Groups[msg.Sender()]
+			if !ok {
+				ctx.ID.Groups[msg.Sender()] = make(map[[8]byte]o3.Group)
+			}
+			ctx.ID.Groups[msg.Sender()][msg.GroupID()] = o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: msg.Members()}
 		case o3.GroupMemberLeftMessage:
 			fmt.Printf("Member [%s] left the Group [%x]\n", msg.Sender(), msg.GroupID())
 		case o3.DeliveryReceiptMessage:
