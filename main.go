@@ -52,7 +52,7 @@ func main() {
 	//check if we can load an addressbook
 	if _, err := os.Stat(abpath); !os.IsNotExist(err) {
 		fmt.Printf("Loading addressbook from %s\n", abpath)
-		err = ctx.ID.Contacts.ImportFrom(abpath)
+		err = ctx.ID.Contacts.LoadFromFile(abpath)
 		if err != nil {
 			fmt.Println("loading addressbook failed")
 			log.Fatal(err)
