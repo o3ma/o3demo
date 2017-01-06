@@ -21,7 +21,7 @@ func main() {
 		gdpath  = "group.directory"
 		tid     o3.ThreemaID
 		pubnick = "parrot"
-		rid     = "8S3HMY9Z"
+		rid     = "EHTWHZTW" // Vinzrid     = "8S3HMY9Z"
 		err     error
 	)
 
@@ -117,6 +117,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+
 
 	// handle incoming messages
 	for receivedMessage := range receiveMsgChan {
@@ -243,7 +245,7 @@ func main() {
 			//}
 			//sendMsgChan <- upm
 
-			// respond with a quote of what was send to us.
+			// respond with a quote of what was send to us. Multiline quote possible.
 			qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), strings.Replace(msg.Text(), "\n", "\n> ", -1), "Exactly!")
 			// we use the convinient "SendTextMessage" function to send
 			err = ctx.SendTextMessage(msg.Sender().String(), qoute, sendMsgChan)
@@ -261,7 +263,8 @@ func main() {
 			group, ok := ctx.ID.Groups.Get(msg.GroupCreator(), msg.GroupID())
 			if ok {
 				time.Sleep(500 * time.Millisecond)
-				qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), msg.Text(), "Exactly in group!")
+				// respond with a quote of what was send to us. Multiline quote possible.
+				qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), strings.Replace(msg.Text(), "\n", "\n> ", -1), "Exactly in group!")
 				ctx.SendGroupTextMessage(group, qoute, sendMsgChan)
 			} else {
 				fmt.Printf("ERROR sending to group [%x] by [%s].\n", msg.GroupID(), msg.GroupCreator())
