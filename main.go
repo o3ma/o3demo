@@ -21,7 +21,7 @@ func main() {
 		gdpath  = "group.directory"
 		tid     o3.ThreemaID
 		pubnick = "parrot"
-		rid     = "EHTWHZTW" // Vinzrid     = "8S3HMY9Z"
+		rid     = "8S3HMY9Z"
 		err     error
 	)
 
