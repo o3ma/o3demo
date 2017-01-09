@@ -147,22 +147,11 @@ func main() {
 			}
 		case o3.GroupManageSetNameMessage:
 			fmt.Printf("Group [%x] is now called %s\n", msg.GroupID(), msg.Name())
+			ctx.ID.Groups.Upsert(o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Name: msg.Name()})
+			ctx.ID.Groups.SaveToFile(gdpath)
 		case o3.GroupManageSetMembersMessage:
 			fmt.Printf("Group [%x] now includes %v\n", msg.GroupID(), msg.Members())
-			// TODO: this should be done in Add()
-			_, ok := ctx.ID.Groups.Get(msg.Sender(), msg.GroupID())
-			members := msg.Members()
-			if !ok {
-				// replace our id with group creator id
-				// \bc we know we are in the group, but we don't know who the creator is
-				for i := range members {
-					if members[i] == ctx.ID.ID {
-						members[i] = msg.Sender()
-					}
-				}
-			}
-			// TODO: add only adds if the group is new so updates on the member list do not work yet
-			ctx.ID.Groups.Add(o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: members})
+			ctx.ID.Groups.Upsert(o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: msg.Members()})
 			ctx.ID.Groups.SaveToFile(gdpath)
 		case o3.GroupMemberLeftMessage:
 			fmt.Printf("Member [%s] left the Group [%x]\n", msg.Sender(), msg.GroupID())
