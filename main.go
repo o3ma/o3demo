@@ -16,7 +16,7 @@ func main() {
 		idpath  = "threema.id"
 		abpath  = "address.book"
 		pubnick = "parrot"
-		rid     = "ZX9TZZ7P"
+		rid     = "ZX9TZZ7P" // e.g. ZX9TZZ7P
 		testMsg = "Say something!"
 	)
 
@@ -106,7 +106,7 @@ func sendTestMsg(tr o3.ThreemaRest, abpath string, rid string, testMsg string, c
 	}
 
 	// send our initial message to our recipient
-	fmt.Println("Sending initial message")
+	fmt.Println("Sending initial message to " + rid + ": " + testMsg)
 	err := ctx.SendTextMessage(rid, testMsg, sendMsgChan)
 	if err != nil {
 		log.Fatal(err)
@@ -129,6 +129,7 @@ func receiveLoop(tid o3.ThreemaID, ctx o3.SessionContext, receiveMsgChan <-chan 
 			// play the audio if you like
 		case o3.TextMessage:
 			// respond with a quote of what was send to us.
+			fmt.Printf("---- Received Message from: %s ----\n%s\n-----------------------------------------\n", msg.Sender(), msg.Text())
 			
 			// but only if it's no a message we sent to ourselves, avoid recursive neverending qoutes
 			if (tid.String() == msg.Sender().String()) {
