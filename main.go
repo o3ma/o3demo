@@ -2,25 +2,38 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"fmt"
 	"os"
 
 	"github.com/o3ma/o3"
 )
 
-func main() {
 
+func main() {
 	var (
-		pass    = []byte{0xA, 0xB, 0xC, 0xD, 0xE}
-		tr      o3.ThreemaRest
+		pass    = []byte{0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37} // 01234567
 		idpath  = "threema.id"
 		abpath  = "address.book"
 		gdpath  = "group.directory"
-		tid     o3.ThreemaID
 		pubnick = "parrot"
-		rid     = "8S3HMY9Z"
+		rid     = "ZX9TZZ7P" // e.g. ZX9TZZ7P
+		testMsg = "Say something!"
 	)
+
+	tr, tid, ctx, receiveMsgChan, sendMsgChan := initialise(pass, idpath, abpath, gdpath, pubnick)
+
+	go sendTestMsg(tr, abpath, rid, testMsg, ctx, sendMsgChan)
+
+	receiveLoop(tid, gdpath, ctx, receiveMsgChan, sendMsgChan)
+}
+
+
+func initialise(pass []byte, idpath string, abpath string, gdpath string, pubnick string) (o3.ThreemaRest, o3.ThreemaID, o3.SessionContext, <-chan o3.ReceivedMsg, chan<- o3.Message) {
+		var (
+			tr      o3.ThreemaRest
+			tid     o3.ThreemaID
+		)
 
 	// check whether an id file exists or else create a new one
 	if _, err := os.Stat(idpath); err != nil {
@@ -69,6 +82,18 @@ func main() {
 		}
 	}
 
+	// let the session begin
+	fmt.Println("Starting session")
+	sendMsgChan, receiveMsgChan, err := ctx.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return tr, tid, ctx, receiveMsgChan, sendMsgChan
+}
+
+
+func sendTestMsg(tr o3.ThreemaRest, abpath string, rid string, testMsg string, ctx o3.SessionContext, sendMsgChan chan<- o3.Message) {
 	// check if we know the remote ID for
 	// (just demonstration purposes \bc sending and receiving functions do this lookup for us)
 	if _, b := ctx.ID.Contacts.Get(rid); b == false {
@@ -91,19 +116,16 @@ func main() {
 		}
 	}
 
-	// let the session begin
-	fmt.Println("Starting session")
-	sendMsgChan, receiveMsgChan, err := ctx.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// send our initial message to our recipient
-	fmt.Println("Sending initial message")
-	err = ctx.SendTextMessage(rid, "Say something!", sendMsgChan)
+	err, tm := ctx.SendTextMessage(rid, testMsg, sendMsgChan)
+	fmt.Println("Sending initial message [" + fmt.Sprintf("%x", tm.ID()) + "] to " + rid + ": " + testMsg + "\n--------------------\n")
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+
+func receiveLoop(tid o3.ThreemaID, gdpath string, ctx o3.SessionContext, receiveMsgChan <-chan o3.ReceivedMsg, sendMsgChan chan<- o3.Message) {
 
 	// handle incoming messages
 	for receivedMessage := range receiveMsgChan {
@@ -118,11 +140,18 @@ func main() {
 			// play the audio if you like
 		case o3.TextMessage:
 			// respond with a quote of what was send to us.
+			fmt.Printf("\nMessage from %s: %s\n--------------------\n\n", msg.Sender(), msg.Text())
+			
+			// but only if it's no a message we sent to ourselves, avoid recursive neverending qoutes
+			if (tid.String() == msg.Sender().String()) {
+				continue
+			}
+			
 			// to make the quote render nicely in the app we use "markdown"
 			// of the form "> PERSONWEQUOTE: Text of qoute\nSomething we wanna add."
 			qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), msg.Text(), "Exactly!")
 			// we use the convinient "SendTextMessage" function to send
-			err = ctx.SendTextMessage(msg.Sender().String(), qoute, sendMsgChan)
+			err, _ := ctx.SendTextMessage(msg.Sender().String(), qoute, sendMsgChan)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -163,5 +192,4 @@ func main() {
 			fmt.Printf("Unknown message type from: %s\nContent: %#v", msg.Sender(), msg)
 		}
 	}
-
 }
