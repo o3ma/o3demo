@@ -15,7 +15,7 @@ func main() {
 		pass    = []byte{0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37} // 01234567
 		idpath  = "threema.id"
 		abpath  = "address.book"
-		gdpath = "group.directory"
+		gdpath  = "group.directory"
 		pubnick = "parrot"
 		rid     = "ZX9TZZ7P" // e.g. ZX9TZZ7P
 		testMsg = "Say something!"
