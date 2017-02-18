@@ -29,7 +29,7 @@ func main() {
 }
 
 
-func initialise(pass []byte, idpath string, abpath string, gdpath string, pubnick string) (o3.ThreemaRest, o3.ThreemaID, o3.SessionContext, <-chan o3.ReceivedMsg, chan<- o3.Message) {
+func initialise(pass []byte, idpath string, abpath string, gdpath string, pubnick string) (*o3.ThreemaRest, *o3.ThreemaID, *o3.SessionContext, <-chan o3.ReceivedMsg, chan<- o3.Message) {
 		var (
 			tr      o3.ThreemaRest
 			tid     o3.ThreemaID
@@ -89,11 +89,11 @@ func initialise(pass []byte, idpath string, abpath string, gdpath string, pubnic
 		log.Fatal(err)
 	}
 
-	return tr, tid, ctx, receiveMsgChan, sendMsgChan
+	return &tr, &tid, &ctx, receiveMsgChan, sendMsgChan
 }
 
 
-func sendTestMsg(tr o3.ThreemaRest, abpath string, rid string, testMsg string, ctx o3.SessionContext, sendMsgChan chan<- o3.Message) {
+func sendTestMsg(tr *o3.ThreemaRest, abpath string, rid string, testMsg string, ctx *o3.SessionContext, sendMsgChan chan<- o3.Message) {
 	// check if we know the remote ID for
 	// (just demonstration purposes \bc sending and receiving functions do this lookup for us)
 	if _, b := ctx.ID.Contacts.Get(rid); b == false {
@@ -125,7 +125,7 @@ func sendTestMsg(tr o3.ThreemaRest, abpath string, rid string, testMsg string, c
 }
 
 
-func receiveLoop(tid o3.ThreemaID, gdpath string, ctx o3.SessionContext, receiveMsgChan <-chan o3.ReceivedMsg, sendMsgChan chan<- o3.Message) {
+func receiveLoop(tid *o3.ThreemaID, gdpath string, ctx *o3.SessionContext, receiveMsgChan <-chan o3.ReceivedMsg, sendMsgChan chan<- o3.Message) {
 
 	// handle incoming messages
 	for receivedMessage := range receiveMsgChan {
@@ -157,13 +157,13 @@ func receiveLoop(tid o3.ThreemaID, gdpath string, ctx o3.SessionContext, receive
 			}
 			// confirm to the sender that we received the message
 			// this is how one can send messages manually without helper functions like "SendTextMessage"
-			drm, err := o3.NewDeliveryReceiptMessage(&ctx, msg.Sender().String(), msg.ID(), o3.MSGDELIVERED)
+			drm, err := o3.NewDeliveryReceiptMessage(ctx, msg.Sender().String(), msg.ID(), o3.MSGDELIVERED)
 			if err != nil {
 				log.Fatal(err)
 			}
 			sendMsgChan <- drm
 			// give a thumbs up
-			upm, err := o3.NewDeliveryReceiptMessage(&ctx, msg.Sender().String(), msg.ID(), o3.MSGAPPROVED)
+			upm, err := o3.NewDeliveryReceiptMessage(ctx, msg.Sender().String(), msg.ID(), o3.MSGAPPROVED)
 			if err != nil {
 				log.Fatal(err)
 			}
