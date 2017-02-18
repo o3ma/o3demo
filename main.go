@@ -15,20 +15,21 @@ func main() {
 		pass    = []byte{0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37} // 01234567
 		idpath  = "threema.id"
 		abpath  = "address.book"
+		gdpath = "group.directory"
 		pubnick = "parrot"
 		rid     = "ZX9TZZ7P" // e.g. ZX9TZZ7P
 		testMsg = "Say something!"
 	)
 
-	tr, tid, ctx, receiveMsgChan, sendMsgChan := initialise(pass, idpath, abpath, pubnick)
+	tr, tid, ctx, receiveMsgChan, sendMsgChan := initialise(pass, idpath, abpath, gdpath, pubnick)
 
 	go sendTestMsg(tr, abpath, rid, testMsg, ctx, sendMsgChan)
 
-	receiveLoop(tid, ctx, receiveMsgChan, sendMsgChan)
+	receiveLoop(tid, gdpath, ctx, receiveMsgChan, sendMsgChan)
 }
 
 
-func initialise(pass []byte, idpath string, abpath string, pubnick string) (o3.ThreemaRest, o3.ThreemaID, o3.SessionContext, <-chan o3.ReceivedMsg, chan<- o3.Message) {
+func initialise(pass []byte, idpath string, abpath string, gdpath string, pubnick string) (o3.ThreemaRest, o3.ThreemaID, o3.SessionContext, <-chan o3.ReceivedMsg, chan<- o3.Message) {
 		var (
 			tr      o3.ThreemaRest
 			tid     o3.ThreemaID
@@ -64,9 +65,19 @@ func initialise(pass []byte, idpath string, abpath string, pubnick string) (o3.T
 	//check if we can load an addressbook
 	if _, err := os.Stat(abpath); !os.IsNotExist(err) {
 		fmt.Printf("Loading addressbook from %s\n", abpath)
-		err = ctx.ID.Contacts.ImportFrom(abpath)
+		err = ctx.ID.Contacts.LoadFromFile(abpath)
 		if err != nil {
 			fmt.Println("loading addressbook failed")
+			log.Fatal(err)
+		}
+	}
+
+	//check if we can load a group directory
+	if _, err := os.Stat(gdpath); !os.IsNotExist(err) {
+		fmt.Printf("Loading group directory from %s\n", gdpath)
+		err = ctx.ID.Groups.LoadFromFile(gdpath)
+		if err != nil {
+			fmt.Println("loading group directory failed")
 			log.Fatal(err)
 		}
 	}
@@ -114,7 +125,7 @@ func sendTestMsg(tr o3.ThreemaRest, abpath string, rid string, testMsg string, c
 }
 
 
-func receiveLoop(tid o3.ThreemaID, ctx o3.SessionContext, receiveMsgChan <-chan o3.ReceivedMsg, sendMsgChan chan<- o3.Message) {
+func receiveLoop(tid o3.ThreemaID, gdpath string, ctx o3.SessionContext, receiveMsgChan <-chan o3.ReceivedMsg, sendMsgChan chan<- o3.Message) {
 
 	// handle incoming messages
 	for receivedMessage := range receiveMsgChan {
@@ -159,10 +170,18 @@ func receiveLoop(tid o3.ThreemaID, ctx o3.SessionContext, receiveMsgChan <-chan 
 			sendMsgChan <- upm
 		case o3.GroupTextMessage:
 			fmt.Printf("%s for Group [%x] created by [%s]:\n%s\n", msg.Sender(), msg.GroupID(), msg.GroupCreator(), msg.Text())
+			group, ok := ctx.ID.Groups.Get(msg.GroupCreator(), msg.GroupID())
+			if ok {
+				ctx.SendGroupTextMessage(group, "This is a group reply!", sendMsgChan)
+			}
 		case o3.GroupManageSetNameMessage:
 			fmt.Printf("Group [%x] is now called %s\n", msg.GroupID(), msg.Name())
+			ctx.ID.Groups.Upsert(o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Name: msg.Name()})
+			ctx.ID.Groups.SaveToFile(gdpath)
 		case o3.GroupManageSetMembersMessage:
 			fmt.Printf("Group [%x] now includes %v\n", msg.GroupID(), msg.Members())
+			ctx.ID.Groups.Upsert(o3.Group{CreatorID: msg.Sender(), GroupID: msg.GroupID(), Members: msg.Members()})
+			ctx.ID.Groups.SaveToFile(gdpath)
 		case o3.GroupMemberLeftMessage:
 			fmt.Printf("Member [%s] left the Group [%x]\n", msg.Sender(), msg.GroupID())
 		case o3.DeliveryReceiptMessage:
