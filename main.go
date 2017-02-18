@@ -117,8 +117,8 @@ func sendTestMsg(tr o3.ThreemaRest, abpath string, rid string, testMsg string, c
 	}
 
 	// send our initial message to our recipient
-	fmt.Println("Sending initial message to " + rid + ": " + testMsg)
-	err := ctx.SendTextMessage(rid, testMsg, sendMsgChan)
+	err, tm := ctx.SendTextMessage(rid, testMsg, sendMsgChan)
+	fmt.Println("Sending initial message [" + fmt.Sprintf("%x", tm.ID()) + "] to " + rid + ": " + testMsg + "\n--------------------\n")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func receiveLoop(tid o3.ThreemaID, gdpath string, ctx o3.SessionContext, receive
 			// play the audio if you like
 		case o3.TextMessage:
 			// respond with a quote of what was send to us.
-			fmt.Printf("---- Received Message from: %s ----\n%s\n-----------------------------------------\n", msg.Sender(), msg.Text())
+			fmt.Printf("\nMessage from %s: %s\n--------------------\n\n", msg.Sender(), msg.Text())
 			
 			// but only if it's no a message we sent to ourselves, avoid recursive neverending qoutes
 			if (tid.String() == msg.Sender().String()) {
@@ -151,7 +151,7 @@ func receiveLoop(tid o3.ThreemaID, gdpath string, ctx o3.SessionContext, receive
 			// of the form "> PERSONWEQUOTE: Text of qoute\nSomething we wanna add."
 			qoute := fmt.Sprintf("> %s: %s\n%s", msg.Sender(), msg.Text(), "Exactly!")
 			// we use the convinient "SendTextMessage" function to send
-			err := ctx.SendTextMessage(msg.Sender().String(), qoute, sendMsgChan)
+			err, _ := ctx.SendTextMessage(msg.Sender().String(), qoute, sendMsgChan)
 			if err != nil {
 				log.Fatal(err)
 			}
